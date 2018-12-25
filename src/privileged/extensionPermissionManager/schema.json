@@ -1,0 +1,30 @@
+[
+  {
+    "namespace": "extensionPermissionManager",
+    "description": "A tiny API to list and manipulate ExtensionPermissions for development reasons",
+    "apiVersion": 5,
+    "types": [],
+    "functions": [
+      {
+        "name": "list",
+        "type": "function",
+        "async": true,
+        "description": "list the optional permissions associated to a given extension id",
+        "parameters": [{
+          "name": "extensionId",
+          "type": "string"
+        }]
+      },
+      {
+        "name": "removeAll",
+        "type": "function",
+        "async": true,
+        "description": "Remove all the optional permissions associated to a given extension id",
+        "parameters": [{
+          "name": "extensionId",
+          "type": "string"
+        }]
+      }
+    ]
+  }
+]

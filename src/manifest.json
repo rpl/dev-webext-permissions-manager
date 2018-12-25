@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+  "name": "dev-webext-permissions-manager",
+  "version": "0.1",
+  "description": "dev-webext-permissions-manager description",
+  "permissions": ["management"],
+  "icons": {
+    "64": "icon.png"
+  },
+  "browser_action": {
+    "default_title": "dev-webext-permissions-manager (browserAction)",
+    "default_icon": {
+      "64": "icon.png"
+    }
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "experiment_apis": {
+    "extensionPermissionManager": {
+      "schema": "./privileged/extensionPermissionManager/schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "script": "./privileged/extensionPermissionManager/api.js",
+        "paths": [["extensionPermissionManager"]]
+      }
+    }
+  }
+}
