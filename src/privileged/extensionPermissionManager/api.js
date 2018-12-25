@@ -4,6 +4,9 @@ ChromeUtils.defineModuleGetter(this, "AddonManager", "resource://gre/modules/Add
 ChromeUtils.defineModuleGetter(this, "ExtensionPermissions", "resource://gre/modules/ExtensionPermissions.jsm");
 ChromeUtils.defineModuleGetter(this, "Services", "resource://gre/modules/Services.jsm");
 
+ChromeUtils.import("resource://gre/modules/ExtensionCommon.jsm");
+const { EventManager } = ExtensionCommon;
+
 this.extensionPermissionManager = class ExtensionPermissionManagerAPI extends ExtensionAPI {
   /**
    * @param {object} context the addon context
@@ -45,7 +48,36 @@ this.extensionPermissionManager = class ExtensionPermissionManagerAPI extends Ex
           const [extension, addon] = await getExtensionByID(extensionId);
           await ExtensionPermissions.removeAll(extension);
           await addon.reload();
-        }
+        },
+        onPermissionChanged: new EventManager(
+          context,
+          "extensionPermissionManager.onPermissionChanged",
+          (fire, extensionId) => {
+            const policy = WebExtensionPolicy.getByID(extensionId);
+            if (!policy) {
+              return () => {};
+            }
+
+            const {extension} = policy;
+
+            const listener = (changeType, change) => {
+              fire.async(changeType, change);
+            };
+            const listenerAdded = listener.bind(null, "added");
+            const listenerRemoved = listener.bind(null, "removed");
+            extension.on("remove-permissions", listenerRemoved);
+            extension.on("add-permissions", listenerAdded);
+
+            const unsubscribe = () => {
+              extension.off("remove-permissions", listenerRemoved);
+              extension.off("add-permissions", listenerAdded);
+            };
+
+            extension.once("shutdown", unsubscribe);
+
+            return unsubscribe;
+          },
+        ).api(),
       },
     };
   }

@@ -8,8 +8,7 @@ browser.management.onDisabled.addListener(refresh);
 window.onload = async () => {
   const extensions = (await browser.management.getAll()).filter(info => {
     // Only list extensions installed temporarily (and skip the manager extension itself).
-    return info.type === "extension" && info.installType == "development"
-      && info.id !== browser.runtime.id;
+    return info.type === "extension" && info.id !== browser.runtime.id;
   });
 
   const listEl = document.getElementById("extensions-list");
@@ -22,6 +21,9 @@ window.onload = async () => {
   for (const extension of extensions) {
     const title = document.createElement("h2");
     title.textContent = extension.name;
+    if (extension.installType === "development") {
+      title.textContent += " (installed temporarily)";
+    }
     listEl.appendChild(title);
 
     const button = document.createElement("button");
@@ -45,6 +47,8 @@ window.onload = async () => {
       err => {
         pre.textContent = `Error reading optional permissions: ${err}`;
       });
+
+    await browser.extensionPermissionManager.onPermissionChanged.addListener(refresh, extension.id);
 
     // Print the extension info for debugging purpose.
     // pre.textContent += "\n\n" + JSON.stringify(extension, null, 2);

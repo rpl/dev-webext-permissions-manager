@@ -25,6 +25,29 @@
           "type": "string"
         }]
       }
+    ],
+    "events": [
+      {
+        "name": "onPermissionChanged",
+        "type": "function",
+        "description": "an event fired when a permission is added or removed",
+        "parameters": [
+          {
+            "name": "changeType",
+            "type": "string",
+            "enum": ["added", "removed"]
+          },
+          {
+            "name": "permissions",
+            "type": "object"
+          }
+        ],
+        "extraParameters": [{
+          "name": "extensionId",
+          "optional": false,
+          "type": "string"
+        }]
+      }
     ]
   }
 ]
