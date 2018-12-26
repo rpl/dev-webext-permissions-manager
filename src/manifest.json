@@ -1,17 +1,30 @@
 {
   "manifest_version": 2,
-  "name": "dev-webext-permissions-manager",
+  "name": "Extension Permissions Manager",
   "version": "0.1",
-  "description": "dev-webext-permissions-manager description",
+  "description": "A small extension to visualize and clear extension permissions for development reasons",
+  "applications": {
+    "gecko": {
+      "id": "@dev-webext-permissions-manager"
+    }
+  },
   "permissions": ["management"],
   "icons": {
     "64": "icon.png"
   },
   "browser_action": {
-    "default_title": "dev-webext-permissions-manager (browserAction)",
+    "default_title": "Extension Permissions Manager",
     "default_icon": {
       "64": "icon.png"
     }
+  },
+  "sidebar_action": {
+    "default_title": "Extension Permissions Manager",
+    "default_icon": {
+      "64": "icon.png"
+    },
+    "default_panel": "ui/tab.html",
+    "browser_style": true
   },
   "background": {
     "scripts": [

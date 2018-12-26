@@ -1,56 +1,139 @@
-const refresh = () => window.location.reload();
+// import choo's template helper
+import html from "nanohtml";
+import morph from "nanomorph";
 
-browser.management.onInstalled.addListener(refresh);
-browser.management.onUninstalled.addListener(refresh);
-browser.management.onEnabled.addListener(refresh);
-browser.management.onDisabled.addListener(refresh);
+const UI = {
+  noExtensionsFound() {
+    return html`
+      <div class="card">
+        <div class="card-body">
+          <p>
+            No extension found. This page will be updated automatically once an
+            extension is installed.
+          </p>
+        </div>
+      </div>
+    `;
+  },
+  extensionCard({ extension, cardBody, onRemoveAll }) {
+    const titleSuffix =
+      extension.installType === "development" ? " (installed temporarily)" : "";
 
-window.onload = async () => {
-  const extensions = (await browser.management.getAll()).filter(info => {
-    // Only list extensions installed temporarily (and skip the manager extension itself).
-    return info.type === "extension" && info.id !== browser.runtime.id;
-  });
-
-  const listEl = document.getElementById("extensions-list");
-  listEl.innerHTML = "";
-
-  if (extensions.length === 0) {
-    listEl.textContent = "No temporary installed extension found yet.";
+    return html`
+      <div class="card">
+        <div class="card-header">
+          <h3>${extension.name}</h3>
+          <b>${extension.id}<small> ${titleSuffix}</small></b>
+        </div>
+        <div class="card-body">${cardBody}</div>
+        <div class="card-footer">
+          <button onclick=${onRemoveAll}>clear permissions and reload</button>
+        </div>
+      </div>
+    `;
   }
+};
 
-  for (const extension of extensions) {
-    const title = document.createElement("h2");
-    title.textContent = extension.name;
-    if (extension.installType === "development") {
-      title.textContent += " (installed temporarily)";
+const ACTIONS = {
+  reloadPage() {
+    window.location.reload();
+  },
+  async getExtensionsList() {
+    return (await browser.management.getAll()).filter(
+      info => info.type === "extension" && info.id !== browser.runtime.id
+    );
+  },
+  getContainerElement() {
+    return document.getElementById("extensions-list");
+  },
+  removeAllPermissionsAndReload(extensionId) {
+    return browser.extensionPermissionManager.removeAll(extensionId);
+  },
+  listPermissions(extensionId) {
+    return browser.extensionPermissionManager.list(extensionId);
+  },
+  subscribeInstalledExtensionChanges() {
+    browser.management.onInstalled.addListener(ACTIONS.reloadPage);
+    browser.management.onUninstalled.addListener(ACTIONS.reloadPage);
+    browser.management.onEnabled.addListener(ACTIONS.reloadPage);
+    browser.management.onDisabled.addListener(ACTIONS.reloadPage);
+  },
+  subscribePermissionChanged(extensionId, listener) {
+    browser.extensionPermissionManager.onPermissionChanged.addListener(
+      listener,
+      extensionId
+    );
+  },
+  async renderPage() {
+    // Only list extensions installed temporarily (and skip the manager
+    // extension itself).
+    const extensions = await ACTIONS.getExtensionsList();
+
+    const listEl = ACTIONS.getContainerElement();
+
+    listEl.innerHTML = "";
+
+    if (extensions.length === 0) {
+      listEl.appendChild(UI.noExtensionsFound());
+
+      return;
     }
-    listEl.appendChild(title);
 
-    const button = document.createElement("button");
-    button.textContent = "remove all";
-    button.style = "margin-left: 1em;";
-    button.onclick = async () => {
-      await browser.extensionPermissionManager.removeAll(extension.id).then(refresh, (err) => {
-        alert(`${err}`);
-      });
-    };
-    title.appendChild(button);
+    for (const extension of extensions) {
+      const onRemoveAll = () => {
+        ACTIONS.removeAllPermissionsAndReload(extension.id).then(
+          ACTIONS.reloadPage,
+          err => {
+            alert(`Unexpected error: ${err}`); // eslint-disable-line no-alert
+          }
+        );
+      };
+      const cardParams = {
+        extension,
+        cardBody: html`
+          <pre>Reading optional permissions...</pre>
+        `,
+        onRemoveAll
+      };
+      const extensionCard = UI.extensionCard(cardParams);
 
-    const pre = document.createElement("pre");
-    pre.textContent = "Reading optional permissions...";
-    listEl.appendChild(pre);
+      listEl.appendChild(extensionCard);
 
-    await browser.extensionPermissionManager.list(extension.id).then(
-      permissions => {
-        pre.textContent = JSON.stringify(permissions, null, 2);
-      },
-      err => {
-        pre.textContent = `Error reading optional permissions: ${err}`;
-      });
+      ACTIONS.listPermissions(extension.id).then(
+        permissions => {
+          morph(
+            extensionCard,
+            UI.extensionCard({
+              ...cardParams,
+              cardBody: html`
+                <pre>${JSON.stringify(permissions, null, 2)}</pre>
+              `
+            })
+          );
+        },
+        err => {
+          morph(
+            extensionCard,
+            UI.extensionCard({
+              ...cardParams,
+              cardBody: html`
+                <p style="color: red;">
+                  Error reading optional permissions: \n${err.toString()}
+                </p>
+              `
+            })
+          );
+        }
+      );
 
-    await browser.extensionPermissionManager.onPermissionChanged.addListener(refresh, extension.id);
-
-    // Print the extension info for debugging purpose.
-    // pre.textContent += "\n\n" + JSON.stringify(extension, null, 2);
+      ACTIONS.subscribePermissionChanged(extension.id, ACTIONS.reloadPage);
+    }
   }
+};
+
+ACTIONS.subscribeInstalledExtensionChanges();
+
+window.onload = () => {
+  ACTIONS.subscribeInstalledExtensionChanges();
+  ACTIONS.renderPage();
 };

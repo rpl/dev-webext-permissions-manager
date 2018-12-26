@@ -1,0 +1,43 @@
+{
+  "name": "dev-webext-permissions-manager",
+  "private": true,
+  "version": "0.1.0",
+  "description": "dev-webext-permissions-manager development environment",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -rf dist/extension",
+    "start": "npm run build && npm run firefox",
+    "build": "node scripts/build.js",
+    "release": "npm run build && web-ext build -s dist/extension",
+    "firefox": "web-ext run -s dist/extension -f firefox-nightly",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\"",
+    "lint": "npm run lint:js && npm run lint:web-ext",
+    "lint:js": "eslint .",
+    "lint:web-ext": "web-ext lint -s src",
+    "cmd:rollup": "rollup"
+  },
+  "keywords": [],
+  "author": "Luca Greco <lgreco@mozilla.com>",
+  "license": "MPL-2.0",
+  "devDependencies": {
+    "@babel/cli": "7.2.3",
+    "@babel/core": "7.2.2",
+    "@babel/preset-env": "7.2.3",
+    "babel-eslint": "10.0.1",
+    "eslint": "5.11.0",
+    "eslint-config-prettier": "3.3.0",
+    "eslint-plugin-prettier": "3.0.0",
+    "nanohtml": "1.4.0",
+    "nanomorph": "5.1.3",
+    "prettier": "1.15.3",
+    "rollup": "0.68.2",
+    "rollup-plugin-alias": "1.5.1",
+    "rollup-plugin-babel": "4.1.0",
+    "rollup-plugin-commonjs": "9.2.0",
+    "rollup-plugin-node-resolve": "4.0.0",
+    "shelljs": "0.8.3",
+    "spectre.css": "0.5.8",
+    "web-ext": "2.9.3"
+  }
+}
