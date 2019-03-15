@@ -1,7 +1,7 @@
 {
   "name": "dev-webext-permissions-manager",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "dev-webext-permissions-manager development environment",
   "main": "index.js",
   "scripts": {

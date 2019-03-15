@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Extension Permissions Manager",
-  "version": "0.1",
+  "version": "0.2",
   "description": "A small extension to visualize and clear extension permissions for development reasons",
   "applications": {
     "gecko": {

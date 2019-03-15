@@ -22,6 +22,49 @@ ChromeUtils.defineModuleGetter(
 ChromeUtils.import("resource://gre/modules/ExtensionCommon.jsm");
 const { EventManager } = ExtensionCommon;
 
+async function ensureAddonActive(addon) {
+  if (!addon) {
+    return Promise.reject({ message: "Extension not found" });
+  }
+
+  if (!addon.isActive) {
+    return Promise.reject({
+      message: "Unable to manage optional permissions for a disabled extension"
+    });
+  }
+
+  return addon;
+}
+
+async function getExtensionByID(extensionId) {
+  const { WebExtensionPolicy } = Cu.getGlobalForObject(Services);
+  const policy = WebExtensionPolicy.getByID(extensionId);
+
+  if (!policy) {
+    return Promise.reject({ message: "Extension not found" });
+  }
+
+  return policy.extension;
+}
+
+async function getExtensionPermissionsById(extensionId) {
+  const extension = await getExtensionByID(extensionId);
+  return ExtensionPermissions.get(extension);
+}
+
+function compareAppVersion(version) {
+  let currentVersion = parseInt(Services.appinfo.version, 10);
+  if (currentVersion === version) {
+    return 0;
+  }
+
+  if (currentVersion > version) {
+    return 1;
+  }
+
+  return -1;
+}
+
 this.extensionPermissionManager = class ExtensionPermissionManagerAPI extends ExtensionAPI {
   /**
    * @param {object} context the addon context
@@ -30,35 +73,20 @@ this.extensionPermissionManager = class ExtensionPermissionManagerAPI extends Ex
   getAPI(context) {
     const { extension: selfExtension } = this;
     const { WebExtensionPolicy } = Cu.getGlobalForObject(Services);
-    const getExtensionByID = async extensionId => {
-      const addon = await AddonManager.getAddonByID(extensionId);
-
-      if (!addon) {
-        return Promise.reject({ message: "Extension not found" });
-      }
-
-      if (!addon.isActive) {
-        return Promise.reject({
-          message:
-            "Unable to manage optional permissions for a disabled extension"
-        });
-      }
-
-      const policy = WebExtensionPolicy.getByID(extensionId);
-
-      if (!policy) {
-        return Promise.reject({ message: "Extension not found" });
-      }
-
-      return [policy.extension, addon];
-    };
 
     return {
       extensionPermissionManager: {
         async list(extensionId) {
-          const [extension] = await getExtensionByID(extensionId);
+          const addon = await AddonManager.getAddonByID(extensionId);
+          ensureAddonActive(addon);
 
-          return ExtensionPermissions.get(extension);
+          // Support ExtensionPermissions API available on Firefox <= 66.
+          if (compareAppVersion(67) < 0) {
+            return getExtensionPermissionsById(extensionId);
+          }
+
+          // Support ExtensionPermissions API available on Firefox >= 67.
+          return ExtensionPermissions.get(extensionId);
         },
         async removeAll(extensionId) {
           if (selfExtension.id === extensionId) {
@@ -67,9 +95,17 @@ this.extensionPermissionManager = class ExtensionPermissionManagerAPI extends Ex
                 "Cannot remove permissions on the extension manger extension"
             });
           }
-          const [extension, addon] = await getExtensionByID(extensionId);
 
-          await ExtensionPermissions.removeAll(extension);
+          const addon = await AddonManager.getAddonByID(extensionId);
+          ensureAddonActive(addon);
+
+          if (compareAppVersion(67) < 0) {
+            const extension = await getExtensionByID(extensionId);
+            await ExtensionPermissions.removeAll(extension);
+          } else {
+            await ExtensionPermissions.removeAll(extensionId);
+          }
+
           await addon.reload();
 
           return Promise.resolve();
